@@ -111,6 +111,9 @@ done
 
 dd if=/dev/zero of=$TGT_DEV bs=1024 count=10
 
+sync
+sleep 30
+
 # Partition with gpt: EFI and system
 fdisk $TGT_DEV <<EOF || DIE 2 fdisk error 
 g
