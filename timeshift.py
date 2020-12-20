@@ -27,7 +27,7 @@ class Timeshift(dnf.Plugin):
         )
 
         tsrun = subprocess.run(["timeshift","--create",
-		"--comments","pre_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    "--comments","pre_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if tsrun.returncode != 0:
             logger.critical(
                 "timeshift: " + _("creating pre_snapshot failed, %d"), tsrun.returncode
@@ -54,7 +54,7 @@ class Timeshift(dnf.Plugin):
         )
 
         tsrun = subprocess.run(["timeshift","--create",
-		"--comments","post_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    "--comments","post_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if tsrun.returncode != 0:
             logger.critical(
                 "timeshift: " + _("creating post_snapshot failed, %d"), tsrun.returncode

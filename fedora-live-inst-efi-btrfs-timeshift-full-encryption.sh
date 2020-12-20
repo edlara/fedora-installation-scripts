@@ -111,6 +111,9 @@ done
 
 dd if=/dev/zero of=$TGT_DEV bs=1024 count=10
 
+sync
+sleep 30
+
 # Partition with gpt: EFI and system
 fdisk $TGT_DEV <<EOF || DIE 2 fdisk error 
 g
@@ -228,14 +231,13 @@ echo -n $ROOT_PASS | chroot /mnt/sysimage passwd --stdin root
 # setup machine-id, grub, EFI boot
 # reinstalling kernel so grub BLS entries and rescue image are created
 # fix BLS options as they use the current kernel parameters from the live image
-# install snapper
+# install and configure timeshift
 chroot /mnt/sysimage bash <<'ENDCHROOT'
 LUKS_UUID=$(lsblk -fs | grep sysroot -A 1 | grep crypto | awk '{ print $4 }')
 BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
-mount /boot/efi
-mount /home
+mount -av
 
 systemd-machine-id-setup
 
@@ -248,10 +250,108 @@ dnf reinstall -y kernel-core
 
 sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ rd.luks.uuid=luks-$LUKS_UUID rhgb quiet \${extra_cmdline},g" /boot/loader/entries/*.conf
 
-dnf install -y timeshift
+dnf install -y timeshift python3-dnf-plugins-extras-common
+
+cat <<EOF >/etc/timeshift.json
+{
+  "backup_device_uuid" : "$BTRFS_UUID",
+  "parent_device_uuid" : "$LUKS_UUID",
+  "do_first_run" : "false",
+  "btrfs_mode" : "true",
+  "include_btrfs_home_for_backup" : "true",
+  "include_btrfs_home_for_restore" : "false",
+  "stop_cron_emails" : "true",
+  "btrfs_use_qgroup" : "true",
+  "schedule_monthly" : "true",
+  "schedule_weekly" : "true",
+  "schedule_daily" : "true",
+  "schedule_hourly" : "false",
+  "schedule_boot" : "true",
+  "count_monthly" : "1",
+  "count_weekly" : "3",
+  "count_daily" : "5",
+  "count_hourly" : "6",
+  "count_boot" : "3",
+  "snapshot_size" : "0",
+  "snapshot_count" : "0",
+  "date_format" : "%Y-%m-%d %H:%M:%S",
+  "exclude" : [],
+  "exclude-apps" : []
+}
+EOF
+
+cat <<EOF >$(dirname $(rpm -q python3-dnf-plugins-core --filesbypkg | grep download.py | awk '{ print $2 }'))/timeshift.py
+# dnf plugin
+# creates snapshots via 'timeshift'.
+# Copy this file to: /usr/lib/python${pythonver}/site-packages/dnf-plugins/
+#
+
+import sys
+import subprocess
+
+from dnfpluginsextras import _, logger
+import dnf
+
+
+class Timeshift(dnf.Plugin):
+    name = 'timeshift'
+
+    def __init__(self, base, cli):
+        self.base = base
+        self.description = " ".join(sys.argv)
+        self._pre_snap_created = False
+
+    def pre_transaction(self):
+        if not self.base.transaction:
+            return
+
+        logger.debug(
+            "timeshift: creating pre_snapshot"
+        )
+
+        tsrun = subprocess.run(["timeshift","--create",
+		"--comments","pre_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if tsrun.returncode != 0:
+            logger.critical(
+                "timeshift: " + _("creating pre_snapshot failed, %d"), tsrun.returncode
+            )
+            return
+
+        self._pre_snap_created = True
+        logger.debug(
+            "timeshift: " + _("created pre_snapshot")
+        )
+
+    def transaction(self):
+        if not self.base.transaction:
+            return
+
+        if not self._pre_snap_created:
+            logger.debug(
+                "timeshift: " + _("skipping post_snapshot because creation of pre_snapshot failed")
+            )
+            return
+
+        logger.debug(
+            "timeshift: creating post_snapshot"
+        )
+
+        tsrun = subprocess.run(["timeshift","--create",
+		"--comments","post_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if tsrun.returncode != 0:
+            logger.critical(
+                "timeshift: " + _("creating post_snapshot failed, %d"), tsrun.returncode
+            )
+            return
+
+        logger.debug(
+            "timeshift: created post_snapshot"
+        )
+EOF
 
 umount /home
 umount /boot/efi
+umount /var/tmp
 umount /sys/firmware/efi/efivars
 
 ENDCHROOT
@@ -263,11 +363,27 @@ mount -odefaults,subvol=@home,ssd,noatime,space_cache,commit=120,compress=zstd /
 chroot /mnt/sysimage useradd -c "${USER_FULLNAME}" -G wheel $USERNAME
 echo -n $USER_PASS | chroot /mnt/sysimage passwd --stdin $USERNAME
 
+umount /mnt/sysimage/boot/efi
+umount /mnt/sysimage/home
+
+chroot /mnt/sysimage bash <<'ENDCHROOT'
+mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
+mount -av
+
+timeshift --create --comments "Big-Bang"
+
+umount /home
+umount /boot/efi
+umount /var/tmp
+umount /sys/firmware/efi/efivars
+umount /run/timeshift/backup
+ENDCHROOT
+
 # relabel for SELinux
 touch /mnt/sysimage/.autorelabel
 
-umount /mnt/sysimage/boot/efi
-umount /mnt/sysimage/home
+killall dbus-launch
+sleep 30
 
 umount /mnt/sysimage/{dev,run,sys,proc}
 umount /mnt/sysimage
