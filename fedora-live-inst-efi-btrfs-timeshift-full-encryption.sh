@@ -47,6 +47,14 @@ if [[ ! "$TGT_DEV" =~ ^/dev/[a-z][a-z0-9]+$ ]]; then
 	exit 1
 fi
 
+PART_PREFIX=""
+if [[ "$TGT_DEV" =~ ^/dev/nvme[a-z0-9]+$ ]]; then
+	PART_PREFIX="p"
+fi
+
+DEV_UEFI=${TGT_DEV}${PART_PREFIX}1
+DEV_ROOT=${TGT_DEV}${PART_PREFIX}2
+
 (( $(id -u) == 0 )) || DIE 1 User must be root
 
 # Ask for passwords and account
@@ -105,7 +113,7 @@ read -p "The content of the device $TGT_DEV will be lost. Type yes in uppercase 
 setenforce 0
 
 # Kill existing device partitions and table
-for devpart in $(ls ${TGT_DEV}[0-9]* 2>/dev/null); do
+for devpart in $(ls ${TGT_DEV}${PART_PREFIX}[0-9]* 2>/dev/null); do
 	dd if=/dev/zero of=$devpart bs=1024 count=10
 done
 
@@ -130,10 +138,10 @@ n
 w
 EOF
 parted $TGT_DEV name 1 EFI-Boot name 2 System || DIE 2 parted error
-mkfs.vfat -F 32 ${TGT_DEV}1 || DIE 2 Error formating EFI partition
-echo -n $LUKS_PASS | cryptsetup luksFormat --type luks1 ${TGT_DEV}2 --key-file -  || DIE 2 Error formating luks partition
+mkfs.vfat -F 32 $DEV_UEFI || DIE 2 Error formating EFI partition
+echo -n $LUKS_PASS | cryptsetup luksFormat --type luks1 $DEV_ROOT --key-file -  || DIE 2 Error formating luks partition
 
-echo -n $LUKS_PASS | cryptsetup luksOpen ${TGT_DEV}2 sysroot --key-file -  || DIE 2 Error opening luks partition
+echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
 mkfs.btrfs /dev/mapper/sysroot || DIE 2 Error formating btrfs partition
 mkdir /mnt/sys || DIE 2 Error making /mnt/sys directory
@@ -146,7 +154,7 @@ mkdir /mnt/sysimage || DIE 2 Error making /mnt/sysimage directory
 mount -osubvol=@,defaults,ssd,noatime,space_cache,commit=120,compress=zstd /dev/mapper/sysroot /mnt/sysimage || DIE 2 Error mounting /mnt/sysimage directory
 
 mkdir -p /mnt/sysimage/boot/efi || DIE 2 Error making /mnt/sysimage/boot/efi directory
-mount ${TGT_DEV}1 /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
+mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
 
 mkdir /mnt/source || DIE 2 Error making /mnt/source directory
 mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
@@ -157,8 +165,8 @@ rsync -pogAXtlHrDx --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude
 # EFI partition needs to be mounted again from within chroot for installation to work
 umount /mnt/sysimage/boot/efi || DIE 2 Error umounting EFI partition
 
-EFI_UUID=$(blkid -s UUID -o value ${TGT_DEV}1)
-LUKS_UUID=$(blkid -s UUID -o value  ${TGT_DEV}2)
+EFI_UUID=$(blkid -s UUID -o value $DEV_UEFI)
+LUKS_UUID=$(blkid -s UUID -o value  $DEV_ROOT)
 BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
 # Key for partition
@@ -357,7 +365,7 @@ umount /sys/firmware/efi/efivars
 ENDCHROOT
 
 # Setup regular user account
-mount ${TGT_DEV}1 /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
+mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
 mount -odefaults,subvol=@home,ssd,noatime,space_cache,commit=120,compress=zstd /dev/mapper/sysroot /mnt/sysimage/home || DIE 2 Error mounting home partition
 
 chroot /mnt/sysimage useradd -c "${USER_FULLNAME}" -G wheel $USERNAME
