@@ -165,7 +165,7 @@ mkdir /mnt/source || DIE 2 Error making /mnt/source directory
 mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
 
 # Software Installation
-rsync -pogAXtlHrDx --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
+rsync -pogAXtlHrDx --info=progress2 --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
 
 # EFI partition needs to be mounted again from within chroot for installation to work
 umount /mnt/sysimage/boot/efi || DIE 2 Error umounting EFI partition
