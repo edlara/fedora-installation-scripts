@@ -145,7 +145,7 @@ echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 
 
 mkfs.btrfs /dev/mapper/sysroot || DIE 2 Error formating btrfs partition
 mkdir /mnt/sys || DIE 2 Error making /mnt/sys directory
-mount -odefaults,subvolid=5,ssd,noatime,space_cache,commit=120,compress=zstd /dev/mapper/sysroot /mnt/sys  || DIE 2 Error mounting /mnt/sys directory
+mount -odefaults,subvolid=5,noatime,compress=zstd /dev/mapper/sysroot /mnt/sys  || DIE 2 Error mounting /mnt/sys directory
 btrfs quota enable /mnt/sys
 btrfs subvolume create /mnt/sys/root || DIE 2 Error creating root volume
 btrfs subvolume create /mnt/sys/home || DIE 2 Error creating home volume
@@ -156,7 +156,7 @@ btrfs subvolume create /mnt/sys/root-snapshots || DIE 2 Error creating root snap
 btrfs subvolume create /mnt/sys/home-snapshots || DIE 2 Error creating home snapshot volume
 
 mkdir /mnt/sysimage || DIE 2 Error making /mnt/sysimage directory
-mount -odefaults,ssd,noatime,space_cache,commit=120,compress=zstd /dev/mapper/sysroot /mnt/sysimage || DIE 2 Error mounting /mnt/sysimage directory
+mount -odefaults,noatime,compress=zstd /dev/mapper/sysroot /mnt/sysimage || DIE 2 Error mounting /mnt/sysimage directory
 
 mkdir -p /mnt/sysimage/boot/efi || DIE 2 Error making /mnt/sysimage/boot/efi directory
 mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
@@ -190,12 +190,12 @@ cat <<EOF >/mnt/sysimage/etc/fstab
 # After editing this file, run 'systemctl daemon-reload' to update systemd
 # units generated from this file.
 #
-UUID=$BTRFS_UUID /                       btrfs   defaults,ssd,noatime,space_cache,commit=120,compress=zstd,x-systemd.device-timeout=0 0 0
+UUID=$BTRFS_UUID /                       btrfs   defaults,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 UUID=$EFI_UUID                            /boot/efi               vfat    umask=0077,shortname=winnt 0 2
-UUID=$BTRFS_UUID /home                   btrfs   defaults,subvol=home,ssd,noatime,space_cache,commit=120,compress=zstd,x-systemd.device-timeout=0 0 0
+UUID=$BTRFS_UUID /home                   btrfs   defaults,subvol=home,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 
-UUID=$BTRFS_UUID /.snapshots             btrfs   defaults,subvol=root-snapshots,ssd,noatime,space_cache,commit=120,compress=zstd,x-systemd.device-timeout=0 0 0
-UUID=$BTRFS_UUID /home/.snapshots        btrfs   defaults,subvol=home-snapshots,ssd,noatime,space_cache,commit=120,compress=zstd,x-systemd.device-timeout=0 0 0
+UUID=$BTRFS_UUID /.snapshots             btrfs   defaults,subvol=root-snapshots,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
+UUID=$BTRFS_UUID /home/.snapshots        btrfs   defaults,subvol=home-snapshots,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 
 vartmp   /var/tmp    tmpfs   defaults   0  0
 
@@ -299,7 +299,7 @@ ENDCHROOT
 
 # Setup regular user account
 mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
-mount -odefaults,subvol=home,ssd,noatime,space_cache,commit=120,compress=zstd /dev/mapper/sysroot /mnt/sysimage/home || DIE 2 Error mounting home partition
+mount -odefaults,subvol=home,noatime,compress=zstd /dev/mapper/sysroot /mnt/sysimage/home || DIE 2 Error mounting home partition
 
 chroot /mnt/sysimage useradd -c "${USER_FULLNAME}" -G wheel $USERNAME
 echo -n $USER_PASS | chroot /mnt/sysimage passwd --stdin $USERNAME
