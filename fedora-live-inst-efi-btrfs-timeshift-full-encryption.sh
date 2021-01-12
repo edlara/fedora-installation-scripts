@@ -29,7 +29,7 @@ while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 			usage
 			exit 1;;
 	esac
-	
+
 	shift
 done
 
@@ -65,7 +65,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm Encryption pass: " LUKS_PASS2
 	echo
-	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then 
+	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -80,7 +80,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm root pass: " ROOT_PASS2
 	echo
-	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then 
+	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -98,7 +98,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm $USERNAME pass: " USER_PASS2
 	echo
-	if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then 
+	if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -123,7 +123,7 @@ sync
 sleep 30
 
 # Partition with gpt: EFI and system
-fdisk $TGT_DEV <<EOF || DIE 2 fdisk error 
+fdisk $TGT_DEV <<EOF || DIE 2 fdisk error
 g
 n
 1

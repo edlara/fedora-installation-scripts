@@ -29,7 +29,7 @@ while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 			usage
 			exit 1;;
 	esac
-	
+
 	shift
 done
 
@@ -65,7 +65,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm Encryption pass: " LUKS_PASS2
 	echo
-	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then 
+	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -80,7 +80,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm root pass: " ROOT_PASS2
 	echo
-	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then 
+	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -98,7 +98,7 @@ for (( count=0 ; count < 3 ; count++ )); do
 	echo
 	read -s -p "Confirm $USERNAME pass: " USER_PASS2
 	echo
-	if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then 
+	if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then
 		echo Passwords do not match, try again
 	else
 		break
@@ -123,7 +123,7 @@ sync
 sleep 30
 
 # Partition with gpt: EFI and system
-fdisk $TGT_DEV <<EOF || DIE 2 fdisk error 
+fdisk $TGT_DEV <<EOF || DIE 2 fdisk error
 g
 n
 1
@@ -238,7 +238,7 @@ patch -p 1 <<EOF
 --- /mnt/sysimage/usr/lib/kernel/install.d/20-grub.install  2020-08-31 08:07:01.000000000 -0400
 +++ /mnt/sysimage/usr/lib/kernel/install.d/20-grub.install  2020-12-09 15:27:16.894798980 -0500
 @@ -104,7 +104,11 @@
- 
+
              LINUX="\$(grep '^linux[ \t]' "\${BLS_TARGET}" | sed -e 's,^linux[ \t]*,,')"
              INITRD="\$(grep '^initrd[ \t]' "\${BLS_TARGET}" | sed -e 's,^initrd[ \t]*,,')"
 -            LINUX_RELPATH="\$(grub2-mkrelpath /boot\${LINUX})"
@@ -308,7 +308,7 @@ echo -n $USER_PASS | chroot /mnt/sysimage passwd --stdin $USERNAME
 mkdir /mnt/sys/root/.snapshots
 mkdir /mnt/sys/home/.snapshots
 
-cat <<EOF >/mnt/sysimage/etc/sysconfig/snapper 
+cat <<EOF >/mnt/sysimage/etc/sysconfig/snapper
 ## Path: System/Snapper
 
 ## Type:        string
@@ -318,7 +318,7 @@ SNAPPER_CONFIGS="root home"
 
 EOF
 
-cat <<EOF >/mnt/sysimage/etc/snapper/configs/root 
+cat <<EOF >/mnt/sysimage/etc/snapper/configs/root
 
 # subvolume to snapshot
 SUBVOLUME="/"

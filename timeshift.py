@@ -36,7 +36,7 @@ class Timeshift(dnf.Plugin):
 
         self._pre_snap_created = True
         logger.debug(
-            "timeshift: " + _("created pre_snapshot") 
+            "timeshift: " + _("created pre_snapshot")
         )
 
     def transaction(self):
