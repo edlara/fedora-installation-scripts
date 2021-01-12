@@ -189,6 +189,7 @@ UUID=$BTRFS_UUID /                       btrfs   defaults,subvol=@,noatime,compr
 UUID=$EFI_UUID                            /boot/efi               vfat    umask=0077,shortname=winnt 0 2
 UUID=$BTRFS_UUID /home                   btrfs   defaults,subvol=@home,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 
+tmpfs    /tmp        tmpfs   defaults   0  0
 vartmp   /var/tmp    tmpfs   defaults   0  0
 
 EOF
@@ -224,7 +225,7 @@ EOF
 # create key for luks device
 mkdir -m0700 /mnt/sysimage/etc/keys || DIE 2 Error making keys directory
 ( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/keys/root.key conv=excl,fsync )
-echo -n $LUKS_PASS | cryptsetup luksAddKey /dev/sda2 /mnt/sysimage/etc/keys/root.key --key-file -
+echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/keys/root.key --key-file -
 
 # preparing for chroot
 mkdir -p /mnt/sysimage/{dev,run,sys,proc} || DIE 2 Error making system directories
@@ -241,6 +242,7 @@ echo -n $ROOT_PASS | chroot /mnt/sysimage passwd --stdin root
 # fix BLS options as they use the current kernel parameters from the live image
 # install and configure timeshift
 chroot /mnt/sysimage bash <<'ENDCHROOT'
+TGT_DEV="/dev/$(lsblk -fs | grep sysroot -A 2 | egrep -v 'sysroot|crypto' | sed 's@^[^sn]\+@@g')"
 LUKS_UUID=$(lsblk -fs | grep sysroot -A 1 | grep crypto | awk '{ print $4 }')
 BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
@@ -250,7 +252,7 @@ mount -av
 systemd-machine-id-setup
 
 grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-efibootmgr -c -d /dev/sda -p 1 -L Fedora -l '\EFI\fedora\shimx64.efi'
+efibootmgr -c -d $TGT_DEV -p 1 -L Fedora -l '\EFI\fedora\shimx64.efi'
 
 grub2-editenv /boot/efi/EFI/fedora/grubenv set blsdir=/@/boot/loader/entries
 
@@ -360,6 +362,7 @@ EOF
 umount /home
 umount /boot/efi
 umount /var/tmp
+umount /tmp
 umount /sys/firmware/efi/efivars
 
 ENDCHROOT
@@ -383,6 +386,7 @@ timeshift --create --comments "Big-Bang"
 umount /home
 umount /boot/efi
 umount /var/tmp
+umount /tmp
 umount /sys/firmware/efi/efivars
 umount /run/timeshift/backup
 ENDCHROOT

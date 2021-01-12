@@ -197,6 +197,7 @@ UUID=$BTRFS_UUID /home                   btrfs   defaults,subvol=home,noatime,co
 UUID=$BTRFS_UUID /.snapshots             btrfs   defaults,subvol=root-snapshots,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 UUID=$BTRFS_UUID /home/.snapshots        btrfs   defaults,subvol=home-snapshots,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
 
+tmpfs    /tmp        tmpfs   defaults   0  0
 vartmp   /var/tmp    tmpfs   defaults   0  0
 
 EOF
@@ -271,17 +272,17 @@ echo -n $ROOT_PASS | chroot /mnt/sysimage passwd --stdin root
 # fix BLS options as they use the current kernel parameters from the live image
 # install snapper
 chroot /mnt/sysimage bash <<'ENDCHROOT'
+TGT_DEV="/dev/$(lsblk -fs | grep sysroot -A 2 | egrep -v 'sysroot|crypto' | sed 's@^[^sn]\+@@g')"
 LUKS_UUID=$(lsblk -fs | grep sysroot -A 1 | grep crypto | awk '{ print $4 }')
 BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
-mount /boot/efi
-mount /home
+mount -av
 
 systemd-machine-id-setup
 
 grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-efibootmgr -c -d /dev/sda -p 1 -L Fedora -l '\EFI\fedora\shimx64.efi'
+efibootmgr -c -d $TGT_DEV -p 1 -L Fedora -l '\EFI\fedora\shimx64.efi'
 
 grub2-editenv /boot/efi/EFI/fedora/grubenv set blsdir=/boot/loader/entries
 
@@ -293,6 +294,8 @@ dnf install -y snapper python3-dnf-plugins-extras-snapper
 
 umount /home
 umount /boot/efi
+umount /var/tmp
+umount /tmp
 umount /sys/firmware/efi/efivars
 
 ENDCHROOT
