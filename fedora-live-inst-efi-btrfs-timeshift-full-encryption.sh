@@ -4,7 +4,7 @@ function usage()
 {
 	echo "Usage: $0 [options] <target device>"
 	echo "Executes the installation of the current LiveOS to the target device formatting"
-	echo "with btrfs (/boot included in root) over full encryption luks1 for timeshift usage"
+	echo "with btrfs (/boot included in root) over full encryption luks2 for timeshift usage"
 	echo
 	echo "Options:"
 	echo "       -h, --help   This help"
@@ -139,7 +139,7 @@ w
 EOF
 parted $TGT_DEV name 1 EFI-Boot name 2 System || DIE 2 parted error
 mkfs.vfat -F 32 $DEV_UEFI || DIE 2 Error formating EFI partition
-echo -n $LUKS_PASS | cryptsetup luksFormat --type luks1 $DEV_ROOT --key-file -  || DIE 2 Error formating luks partition
+echo -n $LUKS_PASS | cryptsetup luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
@@ -161,9 +161,6 @@ mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source dire
 
 # Software Installation
 rsync -pogAXtlHrDx --info=progress2 --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
-
-# EFI partition needs to be mounted again from within chroot for installation to work
-umount /mnt/sysimage/boot/efi || DIE 2 Error umounting EFI partition
 
 EFI_UUID=$(blkid -s UUID -o value $DEV_UEFI)
 LUKS_UUID=$(blkid -s UUID -o value  $DEV_ROOT)
@@ -194,10 +191,31 @@ vartmp   /var/tmp    tmpfs   defaults   0  0
 
 EOF
 
+# Grub boot configuration
+cat <<EOF >/mnt/sysimage/boot/efi/EFI/fedora/grub.cfg
+insmod luks
+insmod luks2
+insmod cryptodisk
+insmod btrfs
+cryptomount -u ${LUKS_UUID//\-/}
+set root='cryptouuid/${LUKS_UUID//\-/}'
+
+if [ x\$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
+else
+  search --no-floppy --fs-uuid --set=dev $BTRFS_UUID
+fi
+
+set prefix=(\$dev)/@/boot/grub2
+export \$prefix
+configfile \$prefix/grub.cfg
+
+EOF
+
 # Grub configuration with cryptodisk and btrfs snapshot booting
 cat <<EOF >/mnt/sysimage/etc/default/grub
 GRUB_TIMEOUT=5
-GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+GRUB_DISTRIBUTOR="\$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=false
 GRUB_TERMINAL_OUTPUT="console"
@@ -237,6 +255,9 @@ mount -v -t sysfs sys /mnt/sysimage/sys/ || DIE 2 Error mounting sys
 # set root password (variables are not passed to chroot)
 echo -n $ROOT_PASS | chroot /mnt/sysimage passwd --stdin root
 
+# EFI partition needs to be mounted again from within chroot for installation to work
+umount /mnt/sysimage/boot/efi || DIE 2 Error umounting EFI partition
+
 # setup machine-id, grub, EFI boot
 # reinstalling kernel so grub BLS entries and rescue image are created
 # fix BLS options as they use the current kernel parameters from the live image
@@ -251,14 +272,17 @@ mount -av
 
 systemd-machine-id-setup
 
-grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
 efibootmgr -c -d $TGT_DEV -p 1 -L Fedora -l '\EFI\fedora\shimx64.efi'
 
-grub2-editenv /boot/efi/EFI/fedora/grubenv set blsdir=/@/boot/loader/entries
+grub2-mkconfig -o /boot/grub2/grub.cfg
+grub2-editenv /boot/grub2/grubenv set blsdir=/@/boot/loader/entries
 
 dnf reinstall -y kernel-core
 
 sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ rd.luks.uuid=luks-$LUKS_UUID rhgb quiet \${extra_cmdline},g" /boot/loader/entries/*.conf
+
+dnf install -y grub2-efi-x64-modules
+rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
 dnf install -y timeshift python3-dnf-plugins-extras-common
 
