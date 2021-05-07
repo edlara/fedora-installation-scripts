@@ -4,7 +4,7 @@ function usage()
 {
 	echo "Usage: $0 [options] <target device>"
 	echo "Executes the installation of the current LiveOS to the target device formatting"
-	echo "with btrfs (/boot included in root) over full encryption luks1 for timeshift usage"
+	echo "with btrfs (/boot included in root) over full encryption luks2 for timeshift usage"
 	echo
 	echo "Options:"
 	echo "       -h, --help   This help"
@@ -131,7 +131,9 @@ n
 
 w
 EOF
-echo -n $LUKS_PASS | cryptsetup luksFormat --type luks1 $DEV_ROOT --key-file -  || DIE 2 Error formating luks partition
+
+# grub2-install with bios does not work with luks2. Conversion to luks2 can happen later
+echo -n $LUKS_PASS | cryptsetup -qv luksFormat --type luks1 $DEV_ROOT --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
@@ -181,7 +183,7 @@ EOF
 # Grub configuration with cryptodisk and btrfs snapshot booting
 cat <<EOF >/mnt/sysimage/etc/default/grub
 GRUB_TIMEOUT=5
-GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+GRUB_DISTRIBUTOR="\$(sed 's, release .*$,,g' /etc/system-release)"
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=false
 GRUB_TERMINAL_OUTPUT="console"
@@ -209,7 +211,8 @@ EOF
 # create key for luks device
 mkdir -m0700 /mnt/sysimage/etc/keys || DIE 2 Error making keys directory
 ( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/keys/root.key conv=excl,fsync )
-echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/keys/root.key --key-file -
+# not installing yet. Backing up so it is installed after converting to luks2
+cp /mnt/sysimage/etc/keys/root.key $HOME/ || DIE 2 Error copying the key to home for delayed installation
 
 # preparing for chroot
 mkdir -p /mnt/sysimage/{dev,run,sys,proc} || DIE 2 Error making system directories
@@ -234,10 +237,10 @@ mount -av
 
 systemd-machine-id-setup
 
-grub2-install $TGT_DEV
 grub2-mkconfig -o /boot/grub2/grub.cfg
+grub2-install --modules "cryptodisk btrfs luks luks2" $TGT_DEV
 
-grub2-editenv /boot/efi/EFI/fedora/grubenv set blsdir=/@/boot/loader/entries
+grub2-editenv /boot/grub2/grubenv set blsdir=/@/boot/loader/entries
 
 dnf reinstall -y kernel-core
 
@@ -379,5 +382,9 @@ umount /mnt/sys
 umount /mnt/source
 
 cryptsetup luksClose sysroot
+
+# Once sysroot closed, convert to luks2 and install the key
+cryptsetup -qv convert --type luks2 $DEV_ROOT
+echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT $HOME/root.key --key-file -
 
 setenforce 1
