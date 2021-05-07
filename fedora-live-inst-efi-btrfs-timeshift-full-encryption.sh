@@ -139,7 +139,7 @@ w
 EOF
 parted $TGT_DEV name 1 EFI-Boot name 2 System || DIE 2 parted error
 mkfs.vfat -F 32 $DEV_UEFI || DIE 2 Error formating EFI partition
-echo -n $LUKS_PASS | cryptsetup luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
+echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
