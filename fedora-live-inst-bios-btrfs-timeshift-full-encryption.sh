@@ -132,8 +132,8 @@ n
 w
 EOF
 
-# grub2-install with bios does not work with luks2. Conversion to luks2 can happen later
-echo -n $LUKS_PASS | cryptsetup -qv luksFormat --type luks1 $DEV_ROOT --key-file -  || DIE 2 Error formating luks partition
+# grub2-install with bios does not work with luks2. After install grub2-mkimage and grub2-bios-setup are used to create a working core.img (stage 1.5)
+echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
@@ -180,6 +180,25 @@ vartmp   /var/tmp    tmpfs   defaults   0  0
 
 EOF
 
+# Grub boot configuration for core.img
+cat <<EOF >/mnt/sysimage/root/early-grub.cfg
+insmod luks2
+insmod cryptodisk
+insmod btrfs
+insmod search
+insmod configfile
+
+cryptomount -u ${LUKS_UUID//\-/}
+set root='cryptouuid/${LUKS_UUID//\-/}'
+
+search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
+
+set prefix=(\$dev)/@/boot/grub2
+export \$prefix
+configfile \$prefix/grub.cfg
+
+EOF
+
 # Grub configuration with cryptodisk and btrfs snapshot booting
 cat <<EOF >/mnt/sysimage/etc/default/grub
 GRUB_TIMEOUT=5
@@ -211,8 +230,7 @@ EOF
 # create key for luks device
 mkdir -m0700 /mnt/sysimage/etc/keys || DIE 2 Error making keys directory
 ( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/keys/root.key conv=excl,fsync )
-# not installing yet. Backing up so it is installed after converting to luks2
-cp /mnt/sysimage/etc/keys/root.key $HOME/ || DIE 2 Error copying the key to home for delayed installation
+echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/keys/root.key --key-file -
 
 # preparing for chroot
 mkdir -p /mnt/sysimage/{dev,run,sys,proc} || DIE 2 Error making system directories
@@ -239,6 +257,9 @@ systemd-machine-id-setup
 
 grub2-mkconfig -o /boot/grub2/grub.cfg
 grub2-install --modules "cryptodisk btrfs luks luks2" $TGT_DEV
+
+grub2-mkimage -c /root/early-grub.cfg -o /boot/grub2/i386-pc/core.img -O i386-pc -p /@/boot/grub2 -C auto -v luks2 all_video boot blscfg btrfs cat configfile cryptodisk echo ext2 fat font gcry_rijndael gcry_rsa gcry_serpent gcry_sha256 gcry_twofish gcry_whirlpool gfxmenu gfxterm gzio halt hfsplus http increment iso9660 jpeg loadenv loopback linux lvm luks mdraid09 mdraid1x minicmd net normal part_apple part_msdos part_gpt password_pbkdf2 pgp png reboot regexp search search_fs_uuid search_fs_file search_label serial sleep syslinuxcfg test tftp version video xfs zstd biosdisk
+grub2-bios-setup -d /boot/grub2/i386-pc/ /dev/sda
 
 grub2-editenv /boot/grub2/grubenv set blsdir=/@/boot/loader/entries
 
@@ -382,9 +403,5 @@ umount /mnt/sys
 umount /mnt/source
 
 cryptsetup luksClose sysroot
-
-# Once sysroot closed, convert to luks2 and install the key
-cryptsetup -qv convert --type luks2 $DEV_ROOT
-echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT $HOME/root.key --key-file -
 
 setenforce 1
