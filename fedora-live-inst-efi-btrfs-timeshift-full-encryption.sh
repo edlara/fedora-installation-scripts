@@ -193,7 +193,6 @@ EOF
 
 # Grub boot configuration
 cat <<EOF >/mnt/sysimage/boot/efi/EFI/fedora/grub.cfg
-insmod luks
 insmod luks2
 insmod cryptodisk
 insmod btrfs
