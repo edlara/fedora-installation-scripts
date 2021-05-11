@@ -182,16 +182,14 @@ EOF
 
 # Grub boot configuration for core.img
 cat <<EOF >/mnt/sysimage/root/early-grub.cfg
-insmod luks2
-insmod cryptodisk
-insmod btrfs
-insmod search
-insmod configfile
-
 cryptomount -u ${LUKS_UUID//\-/}
 set root='cryptouuid/${LUKS_UUID//\-/}'
 
-search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
+if [ x\$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
+else
+  search --no-floppy --fs-uuid --set=dev $BTRFS_UUID
+fi
 
 set prefix=(\$dev)/@/boot/grub2
 export \$prefix

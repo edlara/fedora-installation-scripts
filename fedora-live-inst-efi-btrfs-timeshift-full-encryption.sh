@@ -194,8 +194,6 @@ EOF
 # Grub boot configuration
 cat <<EOF >/mnt/sysimage/boot/efi/EFI/fedora/grub.cfg
 insmod luks2
-insmod cryptodisk
-insmod btrfs
 cryptomount -u ${LUKS_UUID//\-/}
 set root='cryptouuid/${LUKS_UUID//\-/}'
 
