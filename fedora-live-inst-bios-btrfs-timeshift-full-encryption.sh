@@ -56,37 +56,7 @@ DEV_ROOT=${TGT_DEV}${PART_PREFIX}1
 
 (( $(id -u) == 0 )) || DIE 1 User must be root
 
-# Ask for passwords and account
-LUKS_PASS=x
-LUKS_PASS2=y
-for (( count=0 ; count < 3 ; count++ )); do
-	read -s -p "Encryption pass: " LUKS_PASS
-	echo
-	read -s -p "Confirm Encryption pass: " LUKS_PASS2
-	echo
-	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
-		echo Passwords do not match, try again
-	else
-		break
-	fi
-done
-[[ "$LUKS_PASS" != "$LUKS_PASS2" ]] && DIE 1 Passwords do not match, exiting
-
-ROOT_PASS=x
-ROOT_PASS2=y
-for (( count=0 ; count < 3 ; count++ )); do
-	read -s -p "root pass: " ROOT_PASS
-	echo
-	read -s -p "Confirm root pass: " ROOT_PASS2
-	echo
-	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
-		echo Passwords do not match, try again
-	else
-		break
-	fi
-done
-[[ "$ROOT_PASS" != "$ROOT_PASS2" ]] && DIE 1 Passwords do not match, exiting
-
+# Ask for account and passwords
 read -p "Username: " USERNAME
 read -p "$USERNAME Full Name: " USER_FULLNAME
 
@@ -104,6 +74,36 @@ for (( count=0 ; count < 3 ; count++ )); do
 	fi
 done
 [[ "$USER_PASS" != "$USER_PASS2" ]] && DIE 1 Passwords do not match, exiting
+
+ROOT_PASS=x
+ROOT_PASS2=y
+for (( count=0 ; count < 3 ; count++ )); do
+	read -s -p "root pass: " ROOT_PASS
+	echo
+	read -s -p "Confirm root pass: " ROOT_PASS2
+	echo
+	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
+		echo Passwords do not match, try again
+	else
+		break
+	fi
+done
+[[ "$ROOT_PASS" != "$ROOT_PASS2" ]] && DIE 1 Passwords do not match, exiting
+
+LUKS_PASS=x
+LUKS_PASS2=y
+for (( count=0 ; count < 3 ; count++ )); do
+	read -s -p "Encryption pass: " LUKS_PASS
+	echo
+	read -s -p "Confirm Encryption pass: " LUKS_PASS2
+	echo
+	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
+		echo Passwords do not match, try again
+	else
+		break
+	fi
+done
+[[ "$LUKS_PASS" != "$LUKS_PASS2" ]] && DIE 1 Passwords do not match, exiting
 
 read -p "The content of the device $TGT_DEV will be lost. Type yes in uppercase to continue: " CONT_ANSWER
 [[ "$CONT_ANSWER" != "YES" ]] && DIE 1 Terminating...
