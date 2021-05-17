@@ -261,7 +261,7 @@ grub2-bios-setup -d /boot/grub2/i386-pc/ /dev/sda
 
 grub2-editenv /boot/grub2/grubenv set blsdir=/@/boot/loader/entries
 
-dnf reinstall -y kernel-core
+kernel-install add $(uname -r) /lib/modules/$(uname -r)/vmlinuz
 
 sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ rd.luks.uuid=luks-$LUKS_UUID rhgb quiet \${extra_cmdline},g" /boot/loader/entries/*.conf
 
