@@ -1,3 +1,6 @@
 *~
 *.swp
 *.kate-swp
+.build*
+noarch/
+*.rpm
