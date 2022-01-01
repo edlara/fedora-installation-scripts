@@ -53,7 +53,8 @@ if [[ "$TGT_DEV" =~ ^/dev/nvme[a-z0-9]+$ ]]; then
 fi
 
 DEV_UEFI=${TGT_DEV}${PART_PREFIX}1
-DEV_ROOT=${TGT_DEV}${PART_PREFIX}2
+DEV_RECOVERY=${TGT_DEV}${PART_PREFIX}2
+DEV_ROOT=${TGT_DEV}${PART_PREFIX}3
 
 (( $(id -u) == 0 )) || DIE 1 User must be root
 
@@ -128,17 +129,23 @@ g
 n
 1
 2048
-+600M
++50M
 t
 1
 n
 2
 
++10G
+n
+3
+
 
 w
 EOF
-parted $TGT_DEV name 1 EFI-Boot name 2 System || DIE 2 parted error
+parted $TGT_DEV name 1 EFI-Boot name 2 Recovery name 3 System || DIE 2 parted error
 mkfs.vfat -F 32 $DEV_UEFI || DIE 2 Error formating EFI partition
+mkfs.ext4 -O ^has_journal -m 0 $DEV_RECOVERY || DIE 2 Error formating Recovery partition
+
 echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
@@ -163,6 +170,7 @@ mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source dire
 rsync -pogAXtlHrDx --info=progress2 --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
 
 EFI_UUID=$(blkid -s UUID -o value $DEV_UEFI)
+RECOVERY_UUID=$(blkid -s UUID -o value $DEV_RECOVERY)
 LUKS_UUID=$(blkid -s UUID -o value  $DEV_ROOT)
 BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
@@ -170,6 +178,9 @@ BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 cat <<EOF >/mnt/sysimage/etc/crypttab
 sysroot UUID=$LUKS_UUID /etc/keys/root.key luks,discard
 EOF
+
+# Recovery partition mount point
+mkdir /mnt/sysimage/recovery
 
 # fstab with efi, root, home and snapshots
 cat <<EOF >/mnt/sysimage/etc/fstab
@@ -182,9 +193,10 @@ cat <<EOF >/mnt/sysimage/etc/fstab
 # After editing this file, run 'systemctl daemon-reload' to update systemd
 # units generated from this file.
 #
-UUID=$BTRFS_UUID /                       btrfs   defaults,subvol=@,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
-UUID=$EFI_UUID                            /boot/efi               vfat    umask=0077,shortname=winnt 0 2
-UUID=$BTRFS_UUID /home                   btrfs   defaults,subvol=@home,noatime,compress=zstd,x-systemd.device-timeout=0 0 0
+UUID=$BTRFS_UUID  /                       btrfs   defaults,subvol=@,noatime,compress=zstd,x-systemd.device-timeout=0     1 1
+UUID=$EFI_UUID                               /boot/efi               vfat    umask=0077,shortname=winnt                                             0 2
+UUID=$BTRFS_UUID  /home                   btrfs   defaults,subvol=@home,noatime,compress=zstd,x-systemd.device-timeout=0 1 2
+UUID=$RECOVERY_UUID  /recovery               ext4    defaults,noatime,nodiratime,lazytime                                   0 2
 
 tmpfs    /tmp        tmpfs   defaults   0  0
 vartmp   /var/tmp    tmpfs   defaults   0  0
@@ -194,18 +206,73 @@ EOF
 # Grub boot configuration
 cat <<EOF >/mnt/sysimage/boot/efi/EFI/fedora/grub.cfg
 insmod luks2
-cryptomount -u ${LUKS_UUID//\-/}
-set root='cryptouuid/${LUKS_UUID//\-/}'
+insmod regexp
+insmod all_video
+insmod ls
+set timeout=5
 
-if [ x\$feature_platform_search_hint = xy ]; then
-  search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
-else
-  search --no-floppy --fs-uuid --set=dev $BTRFS_UUID
-fi
+menuentry "Boot to main OS" {
+  for crypttry in 1 2 3; do
+    cryptomount -u ${LUKS_UUID//\-/}
+    set cryptres=\$?
+    if [ \$cryptres == 0 ]; then
+      break
+    fi
+    if [ \$crypttry -lt 3 ]; then
+      echo Error decrypting disk, try again...
+    else
+      echo Error decrypting disk, last attempt...
+      sleep --verbose --interruptible 10
+    fi
+  done
+  set root='cryptouuid/${LUKS_UUID//\-/}'
 
-set prefix=(\$dev)/@/boot/grub2
-export \$prefix
-configfile \$prefix/grub.cfg
+  if [ x\$feature_platform_search_hint = xy ]; then
+    search --no-floppy --fs-uuid --set=dev --hint='cryptouuid/${LUKS_UUID//\-/}'  $BTRFS_UUID
+  else
+    search --no-floppy --fs-uuid --set=dev $BTRFS_UUID
+  fi
+
+  set prefix=(\$dev)/@/boot/grub2
+  export \$prefix
+  configfile \$prefix/grub.cfg
+}
+
+submenu "Recovery ->" {
+  # workaround: remove tpm module to avoid grub2 OOM
+  rmmod tpm
+  search --no-floppy --fs-uuid --set=root $RECOVERY_UUID
+
+  for isofile in /Fedora-*-Live-*.iso; do
+    if [ -e "\$isofile" ]; then
+      regexp --set=isoname "/(.*)" "\$isofile"
+      submenu "\$isoname ->" "\$isofile" {
+        iso_path="\$2"
+        loopback loop "\$iso_path"
+        probe --label --set=cd_label (loop)
+        menuentry "Start Fedora Live" {
+          bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image quiet"
+          linux (loop)/isolinux/vmlinuz \$bootoptions
+          initrd (loop)/isolinux/initrd.img
+        }
+        menuentry "Start Fedora Live in basic graphics mode" {
+          bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image nomodeset quiet"
+          linux (loop)/isolinux/vmlinuz \$bootoptions
+          initrd (loop)/isolinux/initrd.img
+        }
+        menuentry "Test this media & start Fedora Live" {
+          bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image rd.live.check quiet"
+          linux (loop)/isolinux/vmlinuz \$bootoptions
+          initrd (loop)/isolinux/initrd.img
+        }
+        menuentry "Run a memory test" {
+          bootoptions=""
+          linux16 (loop)/isolinux/memtest \$bootoptions
+        }
+      }
+    fi
+  done
+}
 
 EOF
 
@@ -255,14 +322,21 @@ echo -n $ROOT_PASS | chroot /mnt/sysimage passwd --stdin root
 # EFI partition needs to be mounted again from within chroot for installation to work
 umount /mnt/sysimage/boot/efi || DIE 2 Error umounting EFI partition
 
+# Passing environment to chroot
+cat <<EOF >/mnt/sysimage/inst_env
+TGT_DEV=$TGT_DEV
+LUKS_UUID=$LUKS_UUID
+BTRFS_UUID=$BTRFS_UUID
+
+export TGT_DEV LUKS_UUID BTRFS_UUID
+EOF
+
 # setup machine-id, grub, EFI boot
 # reinstalling kernel so grub BLS entries and rescue image are created
 # fix BLS options as they use the current kernel parameters from the live image
 # install and configure timeshift
 chroot /mnt/sysimage bash <<'ENDCHROOT'
-TGT_DEV="/dev/$(lsblk -fs | grep sysroot -A 2 | egrep -v 'sysroot|crypto' | sed 's@^[^sn]\+@@g')"
-LUKS_UUID=$(lsblk -fs | grep sysroot -A 1 | grep crypto | awk '{ print $4 }')
-BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
+source /inst_env
 
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
 mount -av
@@ -281,7 +355,9 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 dnf install -y grub2-efi-x64-modules
 rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
-dnf install -y timeshift python3-dnf-plugins-extras-common
+dnf localinstall -y http://asgard1.fios-router.home/repository/f35/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+
+dnf install -y timeshift python3-dnf-plugins-extras-common python3-dnf-plugin-timeshift
 
 cat <<EOF >/etc/timeshift.json
 {
@@ -311,75 +387,9 @@ cat <<EOF >/etc/timeshift.json
 }
 EOF
 
-cat <<EOF >$(dirname $(rpm -q python3-dnf-plugins-core --filesbypkg | grep download.py | awk '{ print $2 }'))/timeshift.py
-# dnf plugin
-# creates snapshots via 'timeshift'.
-# Copy this file to: /usr/lib/python${pythonver}/site-packages/dnf-plugins/
-#
+rm -f /inst_env
 
-import sys
-import subprocess
-
-from dnfpluginsextras import _, logger
-import dnf
-
-
-class Timeshift(dnf.Plugin):
-    name = 'timeshift'
-
-    def __init__(self, base, cli):
-        self.base = base
-        self.description = " ".join(sys.argv)
-        self._pre_snap_created = False
-
-    def pre_transaction(self):
-        if not self.base.transaction:
-            return
-
-        logger.debug(
-            "timeshift: creating pre_snapshot"
-        )
-
-        tsrun = subprocess.run(["timeshift","--create",
-		"--comments","pre_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if tsrun.returncode != 0:
-            logger.critical(
-                "timeshift: " + _("creating pre_snapshot failed, %d"), tsrun.returncode
-            )
-            return
-
-        self._pre_snap_created = True
-        logger.debug(
-            "timeshift: " + _("created pre_snapshot")
-        )
-
-    def transaction(self):
-        if not self.base.transaction:
-            return
-
-        if not self._pre_snap_created:
-            logger.debug(
-                "timeshift: " + _("skipping post_snapshot because creation of pre_snapshot failed")
-            )
-            return
-
-        logger.debug(
-            "timeshift: creating post_snapshot"
-        )
-
-        tsrun = subprocess.run(["timeshift","--create",
-		"--comments","post_snapshot: "+self.description], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if tsrun.returncode != 0:
-            logger.critical(
-                "timeshift: " + _("creating post_snapshot failed, %d"), tsrun.returncode
-            )
-            return
-
-        logger.debug(
-            "timeshift: created post_snapshot"
-        )
-EOF
-
+umount /recovery
 umount /home
 umount /boot/efi
 umount /var/tmp
@@ -404,6 +414,7 @@ mount -av
 
 timeshift --create --comments "Big-Bang"
 
+umount /recovery
 umount /home
 umount /boot/efi
 umount /var/tmp
