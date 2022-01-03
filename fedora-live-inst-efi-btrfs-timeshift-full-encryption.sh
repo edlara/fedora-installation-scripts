@@ -411,6 +411,8 @@ umount /mnt/sysimage/home
 chroot /mnt/sysimage bash <<'ENDCHROOT'
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
 mount -av
+sync
+sleep 5
 
 timeshift --create --comments "Big-Bang"
 
