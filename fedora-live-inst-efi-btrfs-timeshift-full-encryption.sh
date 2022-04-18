@@ -274,6 +274,12 @@ submenu "Recovery ->" {
   done
 }
 
+if [ "\$grub_platform" = "efi" ]; then
+  menuentry 'UEFI Firmware Settings' \$menuentry_id_option 'uefi-firmware' {
+    fwsetup
+  }
+fi
+
 EOF
 
 # Grub configuration with cryptodisk and btrfs snapshot booting
