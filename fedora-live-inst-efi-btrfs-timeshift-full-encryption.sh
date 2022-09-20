@@ -211,6 +211,20 @@ insmod all_video
 insmod ls
 set timeout=5
 
+search --no-floppy --fs-uuid --set=root $EFI_UUID
+if [ x\$feature_default_font_path = xy ] ; then
+   font=unicode
+else
+    font="/EFI/fedora/themes/unicode.pf2"
+fi
+
+set gfxmode=1024x768,auto
+terminal_output gfxterm
+insmod gfxmenu
+insmod png
+# set theme=(\$root)/EFI/fedora/themes/DarkFedora/theme.txt
+# export theme
+
 menuentry "Boot to main OS" {
   for crypttry in 1 2 3; do
     cryptomount -u ${LUKS_UUID//\-/}
@@ -250,25 +264,32 @@ submenu "Recovery ->" {
         iso_path="\$2"
         loopback loop "\$iso_path"
         probe --label --set=cd_label (loop)
+        if [ -e (loop)/isolinux/vmlinuz ]; then
+            set imgpath=isolinux
+        else
+            set imgpath=images/pxeboot
+        fi
         menuentry "Start Fedora Live" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image quiet"
-          linux (loop)/isolinux/vmlinuz \$bootoptions
-          initrd (loop)/isolinux/initrd.img
+          linux (loop)/\$imgpath/vmlinuz \$bootoptions
+          initrd (loop)/\$imgpath/initrd.img
         }
         menuentry "Start Fedora Live in basic graphics mode" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image nomodeset quiet"
-          linux (loop)/isolinux/vmlinuz \$bootoptions
-          initrd (loop)/isolinux/initrd.img
+          linux (loop)/\$imgpath/vmlinuz \$bootoptions
+          initrd (loop)/\$imgpath/initrd.img
         }
         menuentry "Test this media & start Fedora Live" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image rd.live.check quiet"
-          linux (loop)/isolinux/vmlinuz \$bootoptions
-          initrd (loop)/isolinux/initrd.img
+          linux (loop)/\$imgpath/vmlinuz \$bootoptions
+          initrd (loop)/\$imgpath/initrd.img
         }
-        menuentry "Run a memory test" {
-          bootoptions=""
-          linux16 (loop)/isolinux/memtest \$bootoptions
-        }
+        if [ -e (loop)/isolinux/vmlinuz ]; then
+          menuentry "Run a memory test" {
+            bootoptions=""
+            linux16 (loop)/isolinux/memtest \$bootoptions
+          }
+        fi
       }
     fi
   done
@@ -361,7 +382,7 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 dnf install -y grub2-efi-x64-modules
 rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f35/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+dnf localinstall -y http://asgard1.fios-router.home/repository/f37/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
 
 dnf install -y timeshift python3-dnf-plugins-extras-common python3-dnf-plugin-timeshift
 
