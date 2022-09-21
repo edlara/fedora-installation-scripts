@@ -314,6 +314,15 @@ GRUB_CMDLINE_LINUX="ro rd.luks.uuid=luks-$LUKS_UUID rhgb quiet"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_ENABLE_BLSCFG=true
 GRUB_ENABLE_CRYPTODISK=y
+
+# to configure a theme uncomment the following
+# and regenerate /boot/grub2/grub.cfg
+# delete GRUB_TERMINAL_OUTPUT from above
+# GRUB_GFXMODE="1024x768,auto"
+# GRUB_TERMINAL_OUTPUT="gfxterm"
+# GRUB_GFXPAYLOAD_LINUX=keep
+# GRUB_THEME="/boot/efi/EFI/fedora/themes/DarkFedora/theme.txt"
+
 EOF
 
 # Install the luks key in the initram image
