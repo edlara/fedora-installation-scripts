@@ -371,7 +371,7 @@ kernel-install add $(uname -r) /lib/modules/$(uname -r)/vmlinuz
 
 sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ rd.luks.uuid=luks-$LUKS_UUID rhgb quiet \${extra_cmdline},g" /boot/loader/entries/*.conf
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f37/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+dnf localinstall -y http://asgard1.fios-router.home/repository/f38/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
 
 dnf install -y timeshift python3-dnf-plugins-extras-common
 dnf install -y python3-dnf-plugin-timeshift

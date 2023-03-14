@@ -391,7 +391,7 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 dnf install -y grub2-efi-x64-modules
 rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f37/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+dnf localinstall -y http://asgard1.fios-router.home/repository/f38/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
 
 dnf install -y timeshift python3-dnf-plugins-extras-common
 dnf install -y python3-dnf-plugin-timeshift
