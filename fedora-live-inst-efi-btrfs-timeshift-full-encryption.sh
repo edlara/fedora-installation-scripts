@@ -393,7 +393,8 @@ rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
 dnf localinstall -y http://asgard1.fios-router.home/repository/f37/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
 
-dnf install -y timeshift python3-dnf-plugins-extras-common python3-dnf-plugin-timeshift
+dnf install -y timeshift python3-dnf-plugins-extras-common
+dnf install -y python3-dnf-plugin-timeshift
 
 cat <<EOF >/etc/timeshift.json
 {
