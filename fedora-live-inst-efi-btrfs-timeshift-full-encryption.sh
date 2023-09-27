@@ -129,7 +129,7 @@ g
 n
 1
 2048
-+50M
++512M
 t
 1
 n
@@ -176,7 +176,7 @@ BTRFS_UUID=$(blkid -s UUID -o value  /dev/mapper/sysroot)
 
 # Key for partition
 cat <<EOF >/mnt/sysimage/etc/crypttab
-sysroot UUID=$LUKS_UUID /etc/keys/root.key luks,discard
+sysroot UUID=$LUKS_UUID /etc/disk-keys/root.key luks,discard
 EOF
 
 # Recovery partition mount point
@@ -327,7 +327,7 @@ EOF
 
 # Install the luks key in the initram image
 cat <<EOF >/mnt/sysimage/etc/dracut.conf.d/add-keys.conf
-install_items+=" /etc/keys/root.key "
+install_items+=" /etc/disk-keys/root.key "
 EOF
 
 cat <<EOF >/mnt/sysimage/etc/sysconfig/kernel
@@ -341,9 +341,9 @@ DEFAULTKERNEL=kernel-core
 EOF
 
 # create key for luks device
-mkdir -m0700 /mnt/sysimage/etc/keys || DIE 2 Error making keys directory
-( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/keys/root.key conv=excl,fsync )
-echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/keys/root.key --key-file -
+mkdir -m0700 /mnt/sysimage/etc/disk-keys || DIE 2 Error making keys directory
+( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/disk-keys/root.key conv=excl,fsync )
+echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/disk-keys/root.key --key-file -
 
 # preparing for chroot
 mkdir -p /mnt/sysimage/{dev,run,sys,proc} || DIE 2 Error making system directories
@@ -391,9 +391,10 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 dnf install -y grub2-efi-x64-modules
 rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f38/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
-
 dnf install -y timeshift python3-dnf-plugins-extras-common
+
+dnf localinstall -y http://asgard1.fios-router.home/repository/f39/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+dnf install -y python3-dnf-plugin-timeshift
 dnf install -y python3-dnf-plugin-timeshift
 
 cat <<EOF >/etc/timeshift.json
@@ -457,9 +458,7 @@ umount /recovery
 umount /home
 umount /boot/efi
 umount /var/tmp
-umount /tmp
 umount /sys/firmware/efi/efivars
-umount /run/timeshift/backup
 ENDCHROOT
 
 # relabel for SELinux
@@ -468,7 +467,7 @@ touch /mnt/sysimage/.autorelabel
 killall dbus-launch
 sleep 30
 
-umount /mnt/sysimage/{dev,run,sys,proc}
+umount /mnt/sysimage/{dev,run,sys,proc,tmp}
 umount /mnt/sysimage
 umount /mnt/sys
 umount /mnt/source
