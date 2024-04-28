@@ -2,7 +2,7 @@
 
 Name: python3-dnf-plugin-timeshift
 Version: 1.0.8
-Release: 1.ell
+Release: 2.ell
 Summary: Timeshift plugin for DNF
 License: GPLv2+
 Source0: timeshift.py
@@ -11,7 +11,7 @@ BuildArch:      noarch
 BuildRequires:  python3-devel
 BuildRequires:  python3-dnf >= %{dnf_lowest_compatible}
 
-Requires:       python3-dnf-plugins-extras-common = 4.1.1-1%{?dist}
+Requires:       python3-dnf-plugins-extras-common = 4.1.2-1%{?dist}
 %{?python_provide:%python_provide python3-dnf-plugins-extras-timeshift}
 Requires:       timeshift
 Provides:       %{name}-timeshift = %{version}-%{release}
@@ -30,6 +30,9 @@ Timeshift Plugin for DNF, Python 3 version. Creates snapshot every transaction.
 %{python3_sitelib}/dnf-plugins/__pycache__/timeshift.*
 
 %changelog
+* Sun Apr 28 2024 Eduardo Lara <edward.lara.lara@gmail.com> - 1.0.8-2.ell
+- Recompiled for python3-dnf-plugins-extras-common 4.1.2-1
+
 * Fri Nov 10 2023 Eduardo Lara <edward.lara.lara@gmail.com> - 1.0.8-1.ell
 - Recompiled for Fedora 39
 
