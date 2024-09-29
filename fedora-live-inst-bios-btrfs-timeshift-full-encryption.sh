@@ -373,7 +373,7 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 
 dnf install -y timeshift python3-dnf-plugins-extras-common
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f39/x86_64/RPMS/asgard1-repo-1.3-1.ell.noarch.rpm
+dnf localinstall -y http://asgard1.fios-router.home/repository/f40/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
 dnf install -y python3-dnf-plugin-timeshift
 dnf install -y python3-dnf-plugin-timeshift
 
