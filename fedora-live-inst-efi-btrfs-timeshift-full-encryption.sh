@@ -164,7 +164,7 @@ mkdir -p /mnt/sysimage/boot/efi || DIE 2 Error making /mnt/sysimage/boot/efi dir
 mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
 
 mkdir /mnt/source || DIE 2 Error making /mnt/source directory
-mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
+mount /dev/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
 
 # Software Installation
 rsync -pogAXtlHrDx --info=progress2 --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
@@ -391,11 +391,11 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 dnf install -y grub2-efi-x64-modules
 rsync -avz /usr/lib/grub/x86_64-efi /boot/efi/EFI/fedora/
 
-dnf install -y timeshift python3-dnf-plugins-extras-common
+dnf install -y timeshift libdnf5-plugin-actions
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f40/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
-dnf install -y python3-dnf-plugin-timeshift
-dnf install -y python3-dnf-plugin-timeshift
+dnf install -y http://asgard1.fios-router.home/repository/f41/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
+dnf install -y libdnf5-plugin-actions-timeshift
+dnf install -y libdnf5-plugin-actions-timeshift
 
 cat <<EOF >/etc/timeshift.json
 {

@@ -1,0 +1,10 @@
+/var/log/dnf-timeshift.log {
+    weekly
+    missingok
+    notifempty
+    compress
+    delaycompress
+    rotate 4
+    dateext
+    nocreate
+}

@@ -156,7 +156,7 @@ mkdir /mnt/sysimage || DIE 2 Error making /mnt/sysimage directory
 mount -osubvol=@,defaults,noatime,compress=zstd /dev/mapper/sysroot /mnt/sysimage || DIE 2 Error mounting /mnt/sysimage directory
 
 mkdir /mnt/source || DIE 2 Error making /mnt/source directory
-mount /dev/mapper/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
+mount /dev/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
 
 # Software Installation
 rsync -pogAXtlHrDx --info=progress2 --exclude /dev/ --exclude /proc/ --exclude '/tmp/*' --exclude /sys/ --exclude /run/ --exclude '/boot/*rescue*' --exclude /boot/loader/ --exclude /boot/efi/loader/ --exclude /etc/machine-id /mnt/source/ /mnt/sysimage
@@ -371,11 +371,11 @@ kernel-install add $(uname -r) /lib/modules/$(uname -r)/vmlinuz
 
 sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ rd.luks.uuid=luks-$LUKS_UUID rhgb quiet \${extra_cmdline},g" /boot/loader/entries/*.conf
 
-dnf install -y timeshift python3-dnf-plugins-extras-common
+dnf install -y timeshift libdnf5-plugin-actions
 
-dnf localinstall -y http://asgard1.fios-router.home/repository/f40/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
-dnf install -y python3-dnf-plugin-timeshift
-dnf install -y python3-dnf-plugin-timeshift
+dnf install -y http://asgard1.fios-router.home/repository/f41/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
+dnf install -y libdnf5-plugin-actions-timeshift
+dnf install -y libdnf5-plugin-actions-timeshift
 
 cat <<EOF >/etc/timeshift.json
 {
