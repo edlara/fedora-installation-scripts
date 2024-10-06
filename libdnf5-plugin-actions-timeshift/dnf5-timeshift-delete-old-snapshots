@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Parts taken from https://github.com/wmutschl/timeshift-autosnap-apt/blob/main/timeshift-autosnap-apt
+#original author: gobonja
+#adapted for apt by Willi Mutschler (wmutschl)
+
+readonly CONF_FILE=/etc/dnf5-timeshift.conf
+readonly SNAPSHOT_NAME_DATE_PATTERN="[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}_[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}"
+readonly CALLING_PID="${1-$PPID}"
+
+get_property() {
+    if [ ! -f $CONF_FILE ]; then
+        echo "$CONF_FILE not found! Using $1=$3" >&2;
+        param_value=$3
+    else
+        param_value=$(sed '/^\#/d' $CONF_FILE | grep $1 | tail -n 1 | cut -d "=" -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        if ([ "$2" == "boolean" ] && [ "$param_value" != true ] && [ "$param_value" != false ]) || \
+           ([ "$2" == "integer" ] && [[ ! "$param_value" =~ ^[-+]?([1-9][[:digit:]]*|1)$ ]]) || \
+           ([ "$2" == "string" ] && [ "$param_value" == "" ]) ; then
+            echo "Wrong paramater in $CONF_FILE. Using $1=$3" >&2
+            param_value=$3
+        fi
+    fi
+
+    echo $param_value
+}
+
+if $(get_property "deleteSnapshots" "boolean" "true") ; then
+    SNAPSHOTS_TO_DELETE=$( timeshift --list | sed '/\(pre\|post\)_snapshot/!d' )
+    SNAPSHOTS_TO_DELETE=$( sed "s/.*\($SNAPSHOT_NAME_DATE_PATTERN\).*/\1/g" <<< $SNAPSHOTS_TO_DELETE )
+
+    readonly count=$(($(sed -n '$=' <<< $SNAPSHOTS_TO_DELETE)-$(get_property "maxSnapshots" "integer" "10")))
+    readonly max_deletion_attempts=$( get_property "maxDeletionAttempts" "integer" "3" )
+
+    if (( count > 0 )) ; then
+        SNAPSHOTS_TO_DELETE=$( sed $(($count))q <<< $SNAPSHOTS_TO_DELETE )
+        
+        while read snapshot ; do
+            echo timeshift --delete --snapshot $snapshot
+            logger --id=$CALLING_PID --tag=dnf5-timeshift Deleting snapshot $snapshot
+            if $(get_property "debug" "boolean" "false") ; then
+                echo Debugging, not executing command.
+            else
+                attempt_count=1
+                while timeshift --delete --snapshot $snapshot && (( attempt_count <= 3 )) ; do
+                    ((attempt_count++))
+                    sleep 0.5
+                done
+            fi
+        done <<< $SNAPSHOTS_TO_DELETE
+
+        if $(get_property "clearStaleQGroups" "boolean" "true") ; then
+            btrfs qgroup clear-stale /
+        fi
+    else
+        echo No snapshots to delete found.
+    fi
+else
+    echo Snapshots deletion disabled in config.
+fi;
+

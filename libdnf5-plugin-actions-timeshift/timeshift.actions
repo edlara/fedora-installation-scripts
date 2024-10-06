@@ -1,17 +1,22 @@
 # get description in tmp.cmd
 pre_transaction::::/usr/bin/sh -c echo\ "tmp.cmd=$(ps\ -o\ command\ --no-headers\ -p\ '${pid}')"
 
-pre_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf-timeshift\ "Creating\ pre-snapshot\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
-pre_transaction::::/usr/bin/sh -c echo\ "$(date)\ Before\ Transaction\ [${pid}]:\ ${tmp.cmd}."\ >>/var/log/dnf-timeshift.log
-pre_transaction::::/usr/bin/sh -c timeshift\ --create\ --comments\ "pre_snapshot:\ ${tmp.cmd}"\ 2>&1\ >>/var/log/dnf-timeshift.log
-pre_transaction::::/usr/bin/sh -c echo\ "$(date)\ =============================="\ >>/var/log/dnf-timeshift.log
-pre_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf-timeshift\ "Pre-snapshot\ completed\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
+pre_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Creating\ pre-snapshot\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
+pre_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
+pre_transaction::::/usr/bin/sh -c echo\ "Before\ Transaction\ [${pid}]:\ ${tmp.cmd}."\ >>/var/log/dnf5-timeshift.log
+pre_transaction::::/usr/bin/sh -c timeshift\ --create\ --comments\ "pre_snapshot:\ ${tmp.cmd}"\ 2>&1\ >>/var/log/dnf5-timeshift.log
+pre_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
+pre_transaction::::/usr/bin/sh -c echo\ "=============================="\ >>/var/log/dnf5-timeshift.log
+pre_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Pre-snapshot\ completed\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
 
-post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf-timeshift\ "Creating\ post-snapshot\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
-post_transaction::::/usr/bin/sh -c echo\ "$(date)\ After\ Transaction\ [${pid}]:\ ${tmp.cmd}."\ >>/var/log/dnf-timeshift.log
-post_transaction::::/usr/bin/sh -c timeshift\ --create\ --comments\ "post_snapshot:\ ${tmp.cmd}"\ 2>&1\ >>/var/log/dnf-timeshift.log
-post_transaction::::/usr/bin/sh -c echo\ "$(date)\ =============================="\ >>/var/log/dnf-timeshift.log
-post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf-timeshift\ "Post-snapshot\ completed\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
+post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Creating\ post-snapshot\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
+post_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c echo\ "After\ Transaction\ [${pid}]:\ ${tmp.cmd}."\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c timeshift\ --create\ --comments\ "post_snapshot:\ ${tmp.cmd}"\ 2>&1\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c /usr/sbin/dnf5-timeshift-delete-old-snapshots\ "${pid}"\ 2>&1\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c echo\ "=============================="\ >>/var/log/dnf5-timeshift.log
+post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Post-snapshot\ completed\ for\ transaction:\ ${tmp.cmd}."\ 2>&1\ >>/dev/null
 
 # unsetting tmp.cmd
 post_transaction::::/usr/bin/sh -c echo\ tmp.cmd

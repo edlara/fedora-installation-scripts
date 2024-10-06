@@ -1,4 +1,4 @@
-/var/log/dnf-timeshift.log {
+/var/log/dnf5-timeshift.log {
     weekly
     missingok
     notifempty
