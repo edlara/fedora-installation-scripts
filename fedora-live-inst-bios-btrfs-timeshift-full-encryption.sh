@@ -289,6 +289,11 @@ submenu "Recovery ->" {
 
 EOF
 
+# backup grub.cfg
+cp /mnt/sysimage/recovery/grub2/grub.cfg /mnt/sysimage/recovery/grub2/grub.cfg-fedora-installation
+cp /mnt/sysimage/recovery/grub2/grub.cfg-fedora-installation /mnt/sysimage/root/
+
+
 # Grub configuration with cryptodisk and btrfs snapshot booting
 cat <<EOF >/mnt/sysimage/etc/default/grub
 GRUB_TIMEOUT=5

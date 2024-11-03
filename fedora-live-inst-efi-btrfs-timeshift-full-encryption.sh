@@ -303,6 +303,10 @@ fi
 
 EOF
 
+# backup efi grub.cfg
+cp /mnt/sysimage/boot/efi/EFI/fedora/grub.cfg /mnt/sysimage/boot/efi/EFI/fedora/grub.cfg-fedora-installation
+cp /mnt/sysimage/boot/efi/EFI/fedora/grub.cfg-fedora-installation /mnt/sysimage/root/
+
 # Grub configuration with cryptodisk and btrfs snapshot booting
 cat <<EOF >/mnt/sysimage/etc/default/grub
 GRUB_TIMEOUT=5
