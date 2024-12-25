@@ -27,7 +27,7 @@ get_property() {
 }
 
 if $(get_property "deleteSnapshots" "boolean" "true") ; then
-    SNAPSHOTS_TO_DELETE=$( timeshift --list | sed '/\(pre\|post\)_snapshot/!d' )
+    SNAPSHOTS_TO_DELETE=$( timeshift --list | sed '/pre_snapshot/!d' )
     SNAPSHOTS_TO_DELETE=$( sed "s/.*\($SNAPSHOT_NAME_DATE_PATTERN\).*/\1/g" <<< $SNAPSHOTS_TO_DELETE )
 
     readonly count=$(($(sed -n '$=' <<< $SNAPSHOTS_TO_DELETE)-$(get_property "maxSnapshots" "integer" "10")))

@@ -141,7 +141,7 @@ EOF
 mkfs.ext4 -O ^has_journal -m 0 $DEV_RECOVERY || DIE 2 Error formating Recovery partition
 
 # grub2-install with bios does not work with luks2. After install grub2-mkimage and grub2-bios-setup are used to create a working core.img (stage 1.5)
-echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --key-file -  || DIE 2 Error formating luks partition
+echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --pbkdf-force-iterations 10000 --key-file -  || DIE 2 Error formating luks partition
 
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
@@ -378,7 +378,7 @@ sed -i "s,^options root=.*,options root=UUID=$BTRFS_UUID ro rootflags=subvol=@ r
 
 dnf install -y timeshift libdnf5-plugin-actions
 
-dnf install -y http://asgard1.fios-router.home/repository/f41/x86_64/RPMS/asgard1-repo-1.5-1.ell.noarch.rpm
+dnf install -y http://asgard2.fios-router.home/repository/f41/x86_64/RPMS/asgard2-repo-1.0-1.ell.noarch.rpm
 dnf install -y libdnf5-plugin-actions-timeshift
 dnf install -y libdnf5-plugin-actions-timeshift
 

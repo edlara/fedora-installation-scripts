@@ -1,6 +1,6 @@
 Name:      libdnf5-plugin-actions-timeshift
-Version:   1.0.1
-Release:   2.ell
+Version:   1.1
+Release:   1.ell
 Summary:   Timeshift plugin for DNF5
 License:   LGPL-2.1-or-later
 
@@ -36,6 +36,9 @@ Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before 
 %{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %changelog
+* Wed Dec 25 2024 Eduardo Lara <edward.lara.lara@gmail.com> - 1.1-1.ell
+- Removing post_snapshot.
+
 * Sat Oct  5 2024 Eduardo Lara <edward.lara.lara@gmail.com> - 1.0.1-1.ell
 - Correcting logrotate file name to use dnf5
 
