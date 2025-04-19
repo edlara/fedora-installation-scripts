@@ -273,7 +273,7 @@ submenu "Recovery ->" {
             set kernelfile=vmlinuz
             set kernelimg=initrd.img
         elif [ -e (loop)/boot/x86_64/loader/linux ]; then
-            set imgpath=iboot/x86_64/loader
+            set imgpath=boot/x86_64/loader
             set kernelfile=linux
             set kernelimg=initrd
         fi
