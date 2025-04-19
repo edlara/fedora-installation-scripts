@@ -266,28 +266,36 @@ submenu "Recovery ->" {
         probe --label --set=cd_label (loop)
         if [ -e (loop)/isolinux/vmlinuz ]; then
             set imgpath=isolinux
-        else
+            set kernelfile=vmlinuz
+            set kernelimg=initrd.img
+        elif [ -e (loop)/images/pxeboot/vmlinuz ]; then
             set imgpath=images/pxeboot
+            set kernelfile=vmlinuz
+            set kernelimg=initrd.img
+        elif [ -e (loop)/boot/x86_64/loader/linux ]; then
+            set imgpath=iboot/x86_64/loader
+            set kernelfile=linux
+            set kernelimg=initrd
         fi
         menuentry "Start Fedora Live" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image quiet"
-          linux (loop)/\$imgpath/vmlinuz \$bootoptions
-          initrd (loop)/\$imgpath/initrd.img
+          linux (loop)/\$imgpath/\$kernelfile \$bootoptions
+          initrd (loop)/\$imgpath/\$kernelimg
         }
         menuentry "Start Fedora Live in basic graphics mode" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image nomodeset quiet"
-          linux (loop)/\$imgpath/vmlinuz \$bootoptions
-          initrd (loop)/\$imgpath/initrd.img
+          linux (loop)/\$imgpath/\$kernelfile \$bootoptions
+          initrd (loop)/\$imgpath/\$kernelimg
         }
         menuentry "Test this media & start Fedora Live" {
           bootoptions="iso-scan/filename=\$iso_path root=live:CDLABEL=\$cd_label rd.live.image rd.live.check quiet"
-          linux (loop)/\$imgpath/vmlinuz \$bootoptions
-          initrd (loop)/\$imgpath/initrd.img
+          linux (loop)/\$imgpath/\$kernelfile \$bootoptions
+          initrd (loop)/\$imgpath/\$kernelimg
         }
-        if [ -e (loop)/isolinux/vmlinuz ]; then
+        if [ -e (loop)/\$imgpath/memtest ]; then
           menuentry "Run a memory test" {
             bootoptions=""
-            linux16 (loop)/isolinux/memtest \$bootoptions
+            linux16 (loop)/\$imgpath/memtest \$bootoptions
           }
         fi
       }
