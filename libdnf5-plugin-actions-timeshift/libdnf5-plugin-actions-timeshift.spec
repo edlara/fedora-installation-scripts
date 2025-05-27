@@ -1,6 +1,6 @@
 Name:      libdnf5-plugin-actions-timeshift
-Version:   1.1
-Release:   2.ell
+Version:   1.2
+Release:   1.ell
 Summary:   Timeshift plugin for DNF5
 License:   LGPL-2.1-or-later
 
@@ -26,16 +26,19 @@ Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before 
   
   %__install -D -p -m0644 %{SOURCE0} %{buildroot}%{_sysconfdir}/dnf/libdnf5-plugins/actions.d/timeshift.actions
   %__install -D -p -m0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/dnf5-timeshift.conf
-  %__install -D -p -m0755 %{SOURCE2} %{buildroot}%{_sbindir}/dnf5-timeshift-delete-old-snapshots
+  %__install -D -p -m0755 %{SOURCE2} %{buildroot}%{_bindir}/dnf5-timeshift-delete-old-snapshots
   %__install -D -p -m0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %files
 %{_sysconfdir}/dnf/libdnf5-plugins/actions.d/timeshift.actions
 %{_sysconfdir}/dnf5-timeshift.conf
-%{_sbindir}/dnf5-timeshift-delete-old-snapshots
+%{_bindir}/dnf5-timeshift-delete-old-snapshots
 %{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %changelog
+* Tue May 27 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.2-1.ell
+- _sbindir deprectated, moving to _bindir
+
 * Tue Mar 18 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.1-2.ell
 - Recompiling for Fedora 42
 
