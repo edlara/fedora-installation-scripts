@@ -1,5 +1,5 @@
 Name:      libdnf5-plugin-actions-timeshift
-Version:   1.2
+Version:   1.3
 Release:   1.ell
 Summary:   Timeshift plugin for DNF5
 License:   LGPL-2.1-or-later
@@ -36,6 +36,9 @@ Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before 
 %{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %changelog
+* Tue May 27 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.3-1.ell
+- Fixing issue with stderr redirect in timeshift.actions
+
 * Tue May 27 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.2-1.ell
 - _sbindir deprectated, moving to _bindir
 
