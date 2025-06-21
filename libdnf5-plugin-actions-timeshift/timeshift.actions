@@ -12,7 +12,7 @@ pre_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-times
 post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Starting\ clean\ up\ for\ transaction:\ ${tmp.cmd}."\ >>/dev/null\ 2>&1
 post_transaction::::/usr/bin/sh -c echo\ "After\ Transaction\ [${pid}]:\ ${tmp.cmd}."\ >>/var/log/dnf5-timeshift.log
 post_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
-post_transaction::::/usr/bin/sh -c /usr/bin/dnf5-timeshift-delete-old-snapshots\ "${pid}"\ >>/var/log/dnf5-timeshift.log\ 2>&1
+post_transaction::::/usr/bin/sh -c /usr/bin/dnf5-timeshift-post-transaction\ "${pid}"\ >>/var/log/dnf5-timeshift.log\ 2>&1
 post_transaction::::/usr/bin/sh -c echo\ "$(date)"\ >>/var/log/dnf5-timeshift.log
 post_transaction::::/usr/bin/sh -c echo\ "=============================="\ >>/var/log/dnf5-timeshift.log
 post_transaction::::/usr/bin/sh -c /usr/bin/logger\ --id=${pid}\ --tag=dnf5-timeshift\ "Clean\ up\ completed\ for\ transaction:\ ${tmp.cmd}."\ >>/dev/null\ 2>&1

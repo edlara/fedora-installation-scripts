@@ -10,7 +10,7 @@ readonly CALLING_PID="${1-$PPID}"
 
 get_property() {
     if [ ! -f $CONF_FILE ]; then
-        echo "$CONF_FILE not found! Using $1=$3" >&2;
+        echo "$CONF_FILE not found! Using $1=$3" >&2
         param_value=$3
     else
         param_value=$(sed '/^\#/d' $CONF_FILE | grep $1 | tail -n 1 | cut -d "=" -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -40,7 +40,7 @@ if $(get_property "deleteSnapshots" "boolean" "true") ; then
             echo timeshift --delete --snapshot $snapshot
             logger --id=$CALLING_PID --tag=dnf5-timeshift Deleting snapshot $snapshot
             if $(get_property "debug" "boolean" "false") ; then
-                echo Debugging, not executing command.
+                echo Debugging, not executing command: timeshift --delete --snapshot $snapshot
             else
                 attempt_count=1
                 while timeshift --delete --snapshot $snapshot && (( attempt_count <= 3 )) ; do
@@ -58,5 +58,18 @@ if $(get_property "deleteSnapshots" "boolean" "true") ; then
     fi
 else
     echo Snapshots deletion disabled in config.
-fi;
+fi
 
+if $(get_property "rsyncGrubFiles" "boolean" "true") ; then
+    if [ -e /boot/efi/EFI/fedora/grub.cfg-fedora-installation ] && \
+       [ -d /usr/lib/grub/x86_64-efi ]; then
+        if $(get_property "debug" "boolean" "false") ; then
+            echo Debugging, not rsync grub files.
+        else
+            rsync -avz /boot/efi/EFI/fedora/grub.cfg-fedora-installation /boot/efi/EFI/fedora/grub.cfg
+            rsync -avz /usr/lib/grub/x86_64-efi/ /boot/efi/EFI/fedora/x86_64-efi
+        fi
+    else
+        echo Grub configuration backup and/or sources do not exist >&2
+    fi
+fi
