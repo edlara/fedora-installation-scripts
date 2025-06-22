@@ -67,7 +67,7 @@ if $(get_property "rsyncGrubFiles" "boolean" "true") ; then
             echo Debugging, not rsync grub files.
         else
             rsync -avz /boot/efi/EFI/fedora/grub.cfg-fedora-installation /boot/efi/EFI/fedora/grub.cfg
-            rsync -avz /usr/lib/grub/x86_64-efi/ /boot/efi/EFI/fedora/x86_64-efi
+            rsync -avz --delete /usr/lib/grub/x86_64-efi/ /boot/efi/EFI/fedora/x86_64-efi
         fi
     else
         echo Grub configuration backup and/or sources do not exist >&2

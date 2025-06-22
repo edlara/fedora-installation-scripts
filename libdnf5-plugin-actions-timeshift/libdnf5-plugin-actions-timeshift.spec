@@ -1,6 +1,6 @@
 Name:      libdnf5-plugin-actions-timeshift
 Version:   1.4
-Release:   1.ell
+Release:   2.ell
 Summary:   Timeshift plugin for DNF5
 License:   LGPL-2.1-or-later
 
@@ -37,6 +37,9 @@ Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before 
 %{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %changelog
+* Sat Jun 21 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.4-2.ell
+- Deleting removed files from grub
+
 * Sat Jun 21 2025 Eduardo Lara <edward.lara.lara@gmail.com> - 1.4-1.ell
 - Syncing grub files
 
