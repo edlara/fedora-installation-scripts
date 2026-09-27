@@ -185,19 +185,19 @@ echo -n $LUKS_PASS | cryptsetup -qv luksFormat $DEV_ROOT --pbkdf pbkdf2 --pbkdf-
 echo -n $LUKS_PASS | cryptsetup luksOpen $DEV_ROOT sysroot --key-file -  || DIE 2 Error opening luks partition
 
 mkfs.btrfs /dev/mapper/sysroot || DIE 2 Error formating btrfs partition
-mkdir /mnt/sys || DIE 2 Error making /mnt/sys directory
+mkdir -p /mnt/sys || DIE 2 Error making /mnt/sys directory
 mount -odefaults,subvolid=5,noatime,compress=zstd /dev/mapper/sysroot /mnt/sys  || DIE 2 Error mounting /mnt/sys directory
 btrfs quota enable /mnt/sys
 btrfs subvolume create /mnt/sys/@ || DIE 2 Error creating root volume
 btrfs subvolume create /mnt/sys/@home || DIE 2 Error creating home volume
 
-mkdir /mnt/sysimage || DIE 2 Error making /mnt/sysimage directory
+mkdir -p /mnt/sysimage || DIE 2 Error making /mnt/sysimage directory
 mount -osubvol=@,defaults,noatime,compress=zstd /dev/mapper/sysroot /mnt/sysimage || DIE 2 Error mounting /mnt/sysimage directory
 
 mkdir -p /mnt/sysimage/boot/efi || DIE 2 Error making /mnt/sysimage/boot/efi directory
 mount $DEV_UEFI /mnt/sysimage/boot/efi || DIE 2 Error mounting EFI partition
 
-mkdir /mnt/source || DIE 2 Error making /mnt/source directory
+mkdir -p /mnt/source || DIE 2 Error making /mnt/source directory
 mount /dev/live-base /mnt/source || DIE 2 Error mounting /mnt/source directory
 
 # Software Installation
@@ -214,7 +214,7 @@ sysroot UUID=$LUKS_UUID /etc/disk-keys/root.key luks,discard
 EOF
 
 # Recovery partition mount point
-mkdir /mnt/sysimage/recovery
+mkdir -p /mnt/sysimage/recovery
 
 # fstab with efi, root, home and snapshots
 cat <<EOF >/mnt/sysimage/etc/fstab
@@ -387,7 +387,8 @@ DEFAULTKERNEL=kernel-core
 EOF
 
 # create key for luks device
-mkdir -m0700 /mnt/sysimage/etc/disk-keys || DIE 2 Error making keys directory
+mkdir -p -m0700 /mnt/sysimage/etc/disk-keys || DIE 2 Error making keys directory
+chmod 0700 /mnt/sysimage/etc/disk-keys
 ( umask 0077 && dd if=/dev/urandom bs=1 count=64 of=/mnt/sysimage/etc/disk-keys/root.key conv=excl,fsync )
 echo -n $LUKS_PASS | cryptsetup luksAddKey $DEV_ROOT /mnt/sysimage/etc/disk-keys/root.key --key-file -
 
