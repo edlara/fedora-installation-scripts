@@ -7,8 +7,9 @@ function usage()
 	echo "with btrfs (/boot included in root) over full encryption luks2 for timeshift usage"
 	echo
 	echo "Options:"
-	echo "       -h, --help      This help"
-	echo "       -v, --verbose   Displays every command before it gets executed"
+	echo "       -h, --help              This help"
+	echo "       -v, --verbose           Displays every command before it gets executed"
+	echo "       -s, --single-password   Use a single password for user, root, and encryption"
 	echo
 	echo "Parameters:"
 	echo "       target device:   Where to install"
@@ -24,6 +25,7 @@ function DIE {
 
 [ -e /sys/firmware/efi/efivars ] || DIE 1 "This system does not support EFI boot"
 
+SINGLE_PASS=false
 VERBOSE=false
 
 while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
@@ -31,6 +33,7 @@ while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 		-h|--help) usage;
 			exit 1;;
 		-v|--verbose) set -x; VERBOSE=true;;
+		-s|--single-password|--same-password) SINGLE_PASS=true;;
 		*) echo Error: Unknown option $1 >&2;
 			usage
 			exit 1;;
@@ -73,50 +76,70 @@ DEV_ROOT=${TGT_DEV}${PART_PREFIX}3
 read -p "Username: " USERNAME
 read -p "$USERNAME Full Name: " USER_FULLNAME
 
-USER_PASS=x
-USER_PASS2=y
-for (( count=0 ; count < 3 ; count++ )); do
-	read -s -p "$USERNAME pass: " USER_PASS
-	echo
-	read -s -p "Confirm $USERNAME pass: " USER_PASS2
-	echo
-	if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then
-		echo Passwords do not match, try again
-	else
-		break
-	fi
-done
-[[ "$USER_PASS" != "$USER_PASS2" ]] && DIE 1 Passwords do not match, exiting
+if [[ "$SINGLE_PASS" = true ]]; then
+	ALL_PASS=x
+	ALL_PASS2=y
+	for (( count=0 ; count < 3 ; count++ )); do
+		read -s -p "Password (user, root, encryption): " ALL_PASS
+		echo
+		read -s -p "Confirm password: " ALL_PASS2
+		echo
+		if [[ "$ALL_PASS" != "$ALL_PASS2" ]] ; then
+			echo Passwords do not match, try again
+		else
+			break
+		fi
+	done
+	[[ "$ALL_PASS" != "$ALL_PASS2" ]] && DIE 1 Passwords do not match, exiting
+	USER_PASS="$ALL_PASS"
+	ROOT_PASS="$ALL_PASS"
+	LUKS_PASS="$ALL_PASS"
+else
+	USER_PASS=x
+	USER_PASS2=y
+	for (( count=0 ; count < 3 ; count++ )); do
+		read -s -p "$USERNAME pass: " USER_PASS
+		echo
+		read -s -p "Confirm $USERNAME pass: " USER_PASS2
+		echo
+		if [[ "$USER_PASS" != "$USER_PASS2" ]] ; then
+			echo Passwords do not match, try again
+		else
+			break
+		fi
+	done
+	[[ "$USER_PASS" != "$USER_PASS2" ]] && DIE 1 Passwords do not match, exiting
 
-ROOT_PASS=x
-ROOT_PASS2=y
-for (( count=0 ; count < 3 ; count++ )); do
-	read -s -p "root pass: " ROOT_PASS
-	echo
-	read -s -p "Confirm root pass: " ROOT_PASS2
-	echo
-	if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
-		echo Passwords do not match, try again
-	else
-		break
-	fi
-done
-[[ "$ROOT_PASS" != "$ROOT_PASS2" ]] && DIE 1 Passwords do not match, exiting
+	ROOT_PASS=x
+	ROOT_PASS2=y
+	for (( count=0 ; count < 3 ; count++ )); do
+		read -s -p "root pass: " ROOT_PASS
+		echo
+		read -s -p "Confirm root pass: " ROOT_PASS2
+		echo
+		if [[ "$ROOT_PASS" != "$ROOT_PASS2" ]] ; then
+			echo Passwords do not match, try again
+		else
+			break
+		fi
+	done
+	[[ "$ROOT_PASS" != "$ROOT_PASS2" ]] && DIE 1 Passwords do not match, exiting
 
-LUKS_PASS=x
-LUKS_PASS2=y
-for (( count=0 ; count < 3 ; count++ )); do
-	read -s -p "Encryption pass: " LUKS_PASS
-	echo
-	read -s -p "Confirm Encryption pass: " LUKS_PASS2
-	echo
-	if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
-		echo Passwords do not match, try again
-	else
-		break
-	fi
-done
-[[ "$LUKS_PASS" != "$LUKS_PASS2" ]] && DIE 1 Passwords do not match, exiting
+	LUKS_PASS=x
+	LUKS_PASS2=y
+	for (( count=0 ; count < 3 ; count++ )); do
+		read -s -p "Encryption pass: " LUKS_PASS
+		echo
+		read -s -p "Confirm Encryption pass: " LUKS_PASS2
+		echo
+		if [[ "$LUKS_PASS" != "$LUKS_PASS2" ]] ; then
+			echo Passwords do not match, try again
+		else
+			break
+		fi
+	done
+	[[ "$LUKS_PASS" != "$LUKS_PASS2" ]] && DIE 1 Passwords do not match, exiting
+fi
 
 read -p "The content of the device $TGT_DEV will be lost. Type yes in uppercase to continue: " CONT_ANSWER
 [[ "$CONT_ANSWER" != "YES" ]] && DIE 1 Terminating...
