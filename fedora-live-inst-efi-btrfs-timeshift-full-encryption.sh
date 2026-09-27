@@ -7,7 +7,8 @@ function usage()
 	echo "with btrfs (/boot included in root) over full encryption luks2 for timeshift usage"
 	echo
 	echo "Options:"
-	echo "       -h, --help   This help"
+	echo "       -h, --help      This help"
+	echo "       -v, --verbose   Displays every command before it gets executed"
 	echo
 	echo "Parameters:"
 	echo "       target device:   Where to install"
@@ -23,10 +24,13 @@ function DIE {
 
 [ -e /sys/firmware/efi/efivars ] || DIE 1 "This system does not support EFI boot"
 
+VERBOSE=false
+
 while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 	case $1 in
 		-h|--help) usage;
 			exit 1;;
+		-v|--verbose) set -x; VERBOSE=true;;
 		*) echo Error: Unknown option $1 >&2;
 			usage
 			exit 1;;
@@ -34,6 +38,11 @@ while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 
 	shift
 done
+
+CHROOT_BASH_OPTS=""
+if [[ "$VERBOSE" = true || $- == *x* ]]; then
+	CHROOT_BASH_OPTS="-x"
+fi
 
 TGT_DEV="$1"
 
@@ -385,7 +394,7 @@ EOF
 # reinstalling kernel so grub BLS entries and rescue image are created
 # fix BLS options as they use the current kernel parameters from the live image
 # install and configure timeshift
-chroot /mnt/sysimage bash <<'ENDCHROOT'
+chroot /mnt/sysimage bash $CHROOT_BASH_OPTS <<'ENDCHROOT'
 source /inst_env
 
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
@@ -460,7 +469,7 @@ echo -n $USER_PASS | chroot /mnt/sysimage passwd --stdin $USERNAME
 umount /mnt/sysimage/boot/efi
 umount /mnt/sysimage/home
 
-chroot /mnt/sysimage bash <<'ENDCHROOT'
+chroot /mnt/sysimage bash $CHROOT_BASH_OPTS <<'ENDCHROOT'
 mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
 mount -av
 sync
