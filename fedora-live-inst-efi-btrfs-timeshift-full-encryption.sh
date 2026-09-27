@@ -21,6 +21,8 @@ function DIE {
 	exit $exitcode
 }
 
+[ -e /sys/firmware/efi/efivars ] || DIE 1 "This system does not support EFI boot"
+
 while [[ $1 =~ ^\-.*$ && $1 != -- ]]; do
 	case $1 in
 		-h|--help) usage;
