@@ -1,5 +1,5 @@
 Name:      libdnf5-plugin-actions-timeshift
-Version:   1.5
+Version:   1.6
 Release:   1.ell
 Summary:   Timeshift plugin for DNF5
 License:   LGPL-2.1-or-later
@@ -13,12 +13,12 @@ BuildArch: noarch
 
 Provides:  %{name} = %{version}-%{release}
 
-Requires:  timeshift >= 22.11.2-8%{?dist}
-Requires:  libdnf5-plugin-actions >= 5.4.0.0-3%{?dist}
-Requires:  bash >= 5.3.9-3%{?dist}
-Requires:  logrotate >= 3.22.0-5%{?dist}
-Requires:  util-linux-core >= 2.41.3-12%{?dist}
-Requires:  rsync >= 3.4.1-6%{%dist}
+Requires:  timeshift >= 25.12.4-3%{?dist}
+Requires:  libdnf5-plugin-actions >= 5.4.6.0-3%{?dist}
+Requires:  bash >= 5.3.15-2%{?dist}
+Requires:  logrotate >= 3.22.0-6%{?dist}
+Requires:  util-linux-core >= 2.42.4-1%{?dist}
+Requires:  rsync >= 3.5.1-1%{%dist}
 
 %description
 Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before and after every dnf transaction.
@@ -37,6 +37,9 @@ Timeshift Action using libdnf5-plugin-actions for DNF5. Creates snapshot before 
 %{_sysconfdir}/logrotate.d/dnf5-timeshift
 
 %changelog
+* Sun Oct 11 2026 Eduardo Lara <edward.lara.lara@gmail.com> - 1.6-1.ell
+- Recompiling for Fedora 45
+
 * Sat Mar 21 2026 Eduardo Lara <edward.lara.lara@gmail.com> - 1.5-1.ell
 - Recompiling for Fedora 44
 
